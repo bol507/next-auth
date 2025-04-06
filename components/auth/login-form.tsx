@@ -3,13 +3,12 @@
 import { CardWrapper } from "@/components/auth/card-wrapper"
 import { LoginSchema } from "@/schemas"
 import { useForm } from "react-hook-form"
-import * as z from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { FormError } from "@/components/form-error"
-import { FormSuccess } from "../form-success"
+import { FormSuccess } from "@/components/form-success"
 import { login } from "@/actions/login"
 import { useState, useTransition } from "react"
 
@@ -17,9 +16,9 @@ import { useState, useTransition } from "react"
 
 export const LoginForm = () => {
     const [isPending, startTransition] = useTransition()
-    const [error, setError] = useState<string | undefined>(undefined)
-    const [success, setSuccess] = useState<string | undefined>(undefined)
-    const form = useForm<z.infer<typeof LoginSchema>>({
+    const [error, setError] = useState<string | undefined>("")
+    const [success, setSuccess] = useState<string | undefined>("")
+    const form = useForm<LoginSchema>({
         resolver: zodResolver(LoginSchema),
         defaultValues: {
             email: "",
@@ -27,15 +26,13 @@ export const LoginForm = () => {
         }
     })
 
-    const onSubmit = (values: z.infer<typeof LoginSchema>) => {
-        setSuccess(undefined)
-        setError(undefined)
+    const onSubmit = (values: LoginSchema) => {
+        setSuccess("")
+        setError("")
 
         startTransition(()=>{
-            login(values)
-                .then((data) => {
-                    setError(data.error)
-                    setSuccess(data.success)
+            login(values).then((data) => {
+                    setError(data?.error)
                 })
             
         })
