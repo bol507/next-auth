@@ -3,6 +3,8 @@
 import bcrypt from "bcryptjs";
 import { createUser, getUserByEmail } from "@/data/user";
 import { RegisterSchema } from "@/schemas";
+import { generateVerificationToken } from "@/lib/tokens";
+import { sendVerificationEmail } from "@/lib/mail";
 
 
 export const register = async (values: RegisterSchema) => {
@@ -20,8 +22,8 @@ export const register = async (values: RegisterSchema) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     await createUser({email, password: hashedPassword, name});
 
-    //TODO: send verification email
-
-    return { success: "User created successfully!" };
+    const verificationToken = await generateVerificationToken(email);
+    await sendVerificationEmail(verificationToken.email, verificationToken.token);
+    return { success: "confirmation email sent" };
 }
 
