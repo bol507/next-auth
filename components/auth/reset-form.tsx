@@ -15,7 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormError } from "@/components/form-error";
 import { FormSuccess } from "@/components/form-success";
-import { useState } from "react";
+import { startTransition, useState } from "react";
+import { reset } from "@/actions/reset";
 
 export const ResetForm = () => {
   
@@ -33,7 +34,12 @@ export const ResetForm = () => {
     setSuccess("");
     setError("");
 
-    console.log(values);
+    startTransition(() => {
+      reset(values).then((data) => {
+        setError(data?.error);
+        setSuccess(data?.success);
+      });
+    });
   };
   return (
     <CardWrapper
@@ -53,7 +59,7 @@ export const ResetForm = () => {
                   <FormControl>
                     <Input
                       {...field}
-                      disabled={isPending}
+                      disabled={false}
                       placeholder="john.doe@example.com"
                       type="email"
                     />
@@ -64,7 +70,7 @@ export const ResetForm = () => {
             
             <FormError message={error} />
             <FormSuccess message={success} />
-            <Button disabled={isPending} type="submit" className="w-full">
+            <Button disabled={false} type="submit" className="w-full">
               Send reset email
             </Button>
           </div>
