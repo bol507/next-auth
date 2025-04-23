@@ -7,16 +7,19 @@ import { AuthError } from "next-auth";
 import { generateTwoFactorToken, generateVerificationToken } from "@/lib/tokens";
 import { getUserByEmail } from "@/data/user";
 import { sendTwoFactorTokenEmail, sendVerificationEmail } from "@/lib/mail";
+import { getTwoFactorTokenByEmail } from "@/data/two-factor-token";
+import { prisma } from "@/lib/db";
+import { getTwoFactorConfirmationByUserId } from "@/data/two-factor-confirmation";
 
 
 export const login = async (values: LoginSchema) => {
   const validatedFields = LoginSchema.safeParse(values);
-  
+
   if (!validatedFields.success) {
     return { error: "Invalid fields!" };
   }
 
-  const { email, password } = validatedFields.data;
+  const { email, password, code } = validatedFields.data;
 
   const existingUser = await getUserByEmail(email);
 
@@ -30,16 +33,48 @@ export const login = async (values: LoginSchema) => {
     return { success: "confirmation email sent" };
   }
 
-  if(existingUser.isTwoFactorEnabled && existingUser.email){
-    const twoFactorToken = await generateTwoFactorToken(existingUser.email);
-    await sendTwoFactorTokenEmail(existingUser.email, twoFactorToken.token);
-    return { success: "2FA code sent" };
+  if (existingUser.isTwoFactorEnabled && existingUser.email) {
+
+    if (code) {
+      const twoFactorToken = await getTwoFactorTokenByEmail(existingUser.email);
+      if (!twoFactorToken) return { error: "Invalid code!" };
+      if (twoFactorToken.token !== code) return { error: "Invalid code!" };
+      const hasExpired = new Date(twoFactorToken.expires) < new Date();
+      if (hasExpired) return { error: "Code expired!" };
+
+      await prisma.twoFactorToken.delete({
+        where: {
+          id: twoFactorToken.id,
+        },
+      })
+      const existingConfirmation = await getTwoFactorConfirmationByUserId(existingUser.id);
+      if (existingConfirmation) {
+
+        await prisma.twoFactorConfirmation.delete({
+          where: {
+            userId: existingUser.id,
+          },
+        })
+      }
+
+      await prisma.twoFactorConfirmation.create({
+        data: {
+          userId: existingUser.id,
+        },
+      })
+
+      //return { success: "2FA code confirmed" };
+    } else {
+      const twoFactorToken = await generateTwoFactorToken(existingUser.email);
+      await sendTwoFactorTokenEmail(existingUser.email, twoFactorToken.token);
+      return { twoFactor: true };
+    }
   }
 
   try {
-    await signIn("credentials", {  
+    await signIn("credentials", {
       email,
-      password, 
+      password,
       redirectTo: DEFAULT_LOGIN_REDIRECT
     });
   } catch (error) {
@@ -51,6 +86,6 @@ export const login = async (values: LoginSchema) => {
           return { error: "Something went wrong!" };
       }
     }
-    throw error; 
+    throw error;
   }
 };
