@@ -16,9 +16,9 @@ export const getTwoFactorTokenByToken = async (token: string) => {
 
 export const getTwoFactorTokenByEmail = async (email: string) => {
   try{
-    const twoFactorToken = await prisma.twoFactorToken.findUnique({
+    const twoFactorToken = await prisma.twoFactorToken.findFirst({
       where: {
-        token,
+        email,
       },
     })
     return twoFactorToken
