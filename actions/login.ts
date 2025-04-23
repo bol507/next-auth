@@ -4,9 +4,9 @@ import { LoginSchema } from "@/schemas";
 import { signIn } from "@/auth";
 import { DEFAULT_LOGIN_REDIRECT } from "@/routes";
 import { AuthError } from "next-auth";
-import { generateVerificationToken } from "@/lib/tokens";
+import { generateTwoFactorToken, generateVerificationToken } from "@/lib/tokens";
 import { getUserByEmail } from "@/data/user";
-import { sendVerificationEmail } from "@/lib/mail";
+import { sendTwoFactorTokenEmail, sendVerificationEmail } from "@/lib/mail";
 
 
 export const login = async (values: LoginSchema) => {
@@ -28,6 +28,12 @@ export const login = async (values: LoginSchema) => {
     const verificationToken = await generateVerificationToken(existingUser.email);
     await sendVerificationEmail(existingUser.email, verificationToken.token);
     return { success: "confirmation email sent" };
+  }
+
+  if(existingUser.isTwoFactorEnabled && existingUser.email){
+    const twoFactorToken = await generateTwoFactorToken(existingUser.email);
+    await sendTwoFactorTokenEmail(existingUser.email, twoFactorToken.token);
+    return { success: "2FA code sent" };
   }
 
   try {
